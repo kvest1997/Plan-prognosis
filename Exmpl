@@ -1,0 +1,260 @@
+public async Task<byte[]> CreateDocument()
+{
+    byte[] buffer = File.ReadAllBytes(_sourceFilePath);
+
+    using (MemoryStream stream = new MemoryStream())
+    {
+        await stream.WriteAsync(buffer, 0, buffer.Length);
+        stream.Position = 0;
+
+        using (WordprocessingDocument wordprocessingDocument = WordprocessingDocument.Open(stream, true))
+        {
+            var customFilePropertiesPart = wordprocessingDocument.CustomFilePropertiesPart;
+
+            // Если пользовательские свойства не существуют, создаем их
+            if (customFilePropertiesPart == null)
+            {
+                customFilePropertiesPart = wordprocessingDocument.AddCustomFilePropertiesPart();
+                customFilePropertiesPart.Properties = new DocumentFormat.OpenXml.CustomProperties.Properties();
+            }
+
+            SetProperty(customFilePropertiesPart.Properties);
+
+            customFilePropertiesPart.Properties.Save();
+            wordprocessingDocument.MainDocumentPart.Document.Save(); 
+            wordprocessingDocument.Close();
+
+            return stream.ToArray();
+        }
+    }
+}
+
+private void SetProperty(DocumentFormat.OpenXml.CustomProperties.Properties properties)
+{
+    // Убедитесь, что у вас есть свойство с нужным именем
+    var property = properties.Elements<CustomDocumentProperty>().FirstOrDefault(p => p.Name.Value == "MyCustomProperty");
+
+    // Если свойство не существует, создаем его
+    if (property == null)
+    {
+        property = new CustomDocumentProperty()
+        {
+            Name = new StringValue("MyCustomProperty"),
+            VT = new VT()
+        };
+        properties.AppendChild(property);
+    }
+
+    // Объединяем строки
+    string entryStrMtr = string.Empty;
+    foreach (var mtrType in _requestMmrTeoTags.ListTypesOfMTR)
+    {
+        entryStrMtr += $"{mtrType.UoValue} - {mtrType.UoParameter};\n";
+    }
+
+    // Устанавливаем текст свойства
+    var vTLPWSTR = property.VT as VTLPWSTR;
+    if (vTLPWSTR == null)
+    {
+        vTLPWSTR = new VTLPWSTR();
+        property.VT = vTLPWSTR;
+    }
+
+    vTLPWSTR.Text = entryStrMtr; // Устанавливаем объединенные строки
+}
+
+public async Task<byte[]> CreateDocument()
+{
+    byte[] buffer = File.ReadAllBytes(_sourceFilePath);
+
+    using (MemoryStream stream = new MemoryStream())
+    {
+        await stream.WriteAsync(buffer, 0, buffer.Length);
+        stream.Position = 0;
+
+        using (WordprocessingDocument wordprocessingDocument = WordprocessingDocument.Open(stream, true))
+        {
+            // Убедитесь, что у вас есть часть пользовательских свойств
+            var customFilePropertiesPart = wordprocessingDocument.CustomFilePropertiesPart;
+            if (customFilePropertiesPart == null)
+            {
+                customFilePropertiesPart = wordprocessingDocument.AddCustomFilePropertiesPart();
+                customFilePropertiesPart.Properties = new DocumentFormat.OpenXml.CustomProperties.Properties();
+            }
+
+            SetProperty(customFilePropertiesPart.Properties);
+
+            // Добавляем текст с синим цветом в основной документ
+            AddColoredTextToMainDocument(wordprocessingDocument);
+
+            customFilePropertiesPart.Properties.Save();
+            wordprocessingDocument.MainDocumentPart.Document.Save(); 
+            wordprocessingDocument.Close();
+
+            return stream.ToArray();
+        }
+    }
+}
+
+private void SetProperty(DocumentFormat.OpenXml.CustomProperties.Properties properties)
+{
+    // Тот же код, что и раньше для установки пользовательского свойства
+    var property = properties.Elements<CustomDocumentProperty>().FirstOrDefault(p => p.Name.Value == "MyCustomProperty");
+
+    if (property == null)
+    {
+        property = new CustomDocumentProperty()
+        {
+            Name = new StringValue("MyCustomProperty"),
+            VT = new VT()
+        };
+        properties.AppendChild(property);
+    }
+
+    // Объединяем строки
+    string entryStrMtr = string.Empty;
+    foreach (var mtrType in _requestMmrTeoTags.ListTypesOfMTR)
+    {
+        entryStrMtr += $"{mtrType.UoValue} - {mtrType.UoParameter};\n";
+    }
+
+    var vTLPWSTR = property.VT as VTLPWSTR;
+    if (vTLPWSTR == null)
+    {
+        vTLPWSTR = new VTLPWSTR();
+        property.VT = vTLPWSTR;
+    }
+
+    vTLPWSTR.Text = entryStrMtr; // Устанавливаем объединенные строки
+}
+
+private void AddColoredTextToMainDocument(WordprocessingDocument wordprocessingDocument)
+{
+    var body = wordprocessingDocument.MainDocumentPart.Document.Body;
+
+    // Создаем новый параграф
+    var paragraph = new DocumentFormat.OpenXml.Wordprocessing.Paragraph();
+
+    // Создаем текст с синим цветом
+    var run = new DocumentFormat.OpenXml.Wordprocessing.Run();
+    var text = new DocumentFormat.OpenXml.Wordprocessing.Text("Ваш текст с синим цветом");
+    
+    // Устанавливаем цвет текста
+    var runProperties = new DocumentFormat.OpenXml.Wordprocessing.RunProperties();
+    runProperties.Color = new DocumentFormat.OpenXml.Wordprocessing.Color() { Val = "0000FF" }; // Синий цвет в шестнадцатеричном формате
+
+    run.Append(runProperties);
+    run.Append(text);
+    paragraph.Append(run);
+
+    // Добавляем параграф в тело документа
+    body.Append(paragraph);
+}
+
+private void AddTableToMainDocument(WordprocessingDocument wordprocessingDocument)
+{
+    var body = wordprocessingDocument.MainDocumentPart.Document.Body;
+
+    // Создаем таблицу
+    var table = new DocumentFormat.OpenXml.Wordprocessing.Table();
+
+    // Создаем таблицу с заголовками
+    var headerRow = new DocumentFormat.OpenXml.Wordprocessing.TableRow();
+    headerRow.Append(CreateTableCell("Заголовок 1"));
+    headerRow.Append(CreateTableCell("Заголовок 2"));
+    headerRow.Append(CreateTableCell("Заголовок 3"));
+    table.Append(headerRow);
+
+    // Добавляем несколько строк данных
+    for (int i = 1; i <= 5; i++)
+    {
+        var row = new DocumentFormat.OpenXml.Wordprocessing.TableRow();
+        row.Append(CreateTableCell($"Данные {i} - 1"));
+        row.Append(CreateTableCell($"Данные {i} - 2"));
+        row.Append(CreateTableCell($"Данные {i} - 3"));
+        table.Append(row);
+    }
+
+    // Добавляем таблицу в тело документа
+    body.Append(table);
+}
+
+private DocumentFormat.OpenXml.Wordprocessing.TableCell CreateTableCell(string text)
+{
+    var cell = new DocumentFormat.OpenXml.Wordprocessing.TableCell();
+    var paragraph = new DocumentFormat.OpenXml.Wordprocessing.Paragraph(new DocumentFormat.OpenXml.Wordprocessing.Run(new DocumentFormat.OpenXml.Wordprocessing.Text(text)));
+    cell.Append(paragraph);
+    return cell;
+}
+
+public async Task<byte[]> CreateDocument()
+{
+    byte[] buffer = File.ReadAllBytes(_sourceFilePath);
+
+    using (MemoryStream stream = new MemoryStream())
+    {
+        await stream.WriteAsync(buffer, 0, buffer.Length);
+        stream.Position = 0;
+
+        using (WordprocessingDocument wordprocessingDocument = WordprocessingDocument.Open(stream, true))
+        {
+            var customFilePropertiesPart = wordprocessingDocument.CustomFilePropertiesPart;
+            if (customFilePropertiesPart == null)
+            {
+                customFilePropertiesPart = wordprocessingDocument.AddCustomFilePropertiesPart();
+                customFilePropertiesPart.Properties = new DocumentFormat.OpenXml.CustomProperties.Properties();
+            }
+
+            SetProperty(customFilePropertiesPart.Properties);
+
+            // Добавляем текст с синим цветом в основной документ
+            AddColoredTextToMainDocument(wordprocessingDocument);
+
+            // Добавляем таблицу в основной документ
+            AddTableToMainDocument(wordprocessingDocument);
+
+            customFilePropertiesPart.Properties.Save();
+            wordprocessingDocument.MainDocumentPart.Document.Save(); 
+            wordprocessingDocument.Close();
+
+            return stream.ToArray();
+        }
+    }
+}
+
+private void SetTableDataAsProperty(DocumentFormat.OpenXml.CustomProperties.Properties properties)
+{
+    // Создаем строку для хранения данных таблицы
+    var tableData = new StringBuilder();
+    
+    // Заголовки таблицы
+    tableData.AppendLine("Заголовок 1, Заголовок 2, Заголовок 3");
+
+    // Добавляем строки данных
+    for (int i = 1; i <= 5; i++)
+    {
+        tableData.AppendLine($"Данные {i} - 1, Данные {i} - 2, Данные {i} - 3");
+    }
+
+    // Устанавливаем данные таблицы в пользовательское свойство
+    var property = properties.Elements<CustomDocumentProperty>().FirstOrDefault(p => p.Name.Value == "TableData");
+
+    if (property == null)
+    {
+        property = new CustomDocumentProperty()
+        {
+            Name = new StringValue("TableData"),
+            VT = new VT()
+        };
+        properties.AppendChild(property);
+    }
+
+    var vTLPWSTR = property.VT as VTLPWSTR;
+    if (vTLPWSTR == null)
+    {
+        vTLPWSTR = new VTLPWSTR();
+        property.VT = vTLPWSTR;
+    }
+
+    vTLPWSTR.Text = tableData.ToString(); // Устанавливаем данные таблицы
+}
