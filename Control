@@ -1,0 +1,17 @@
+public void InsertTextIntoContentControl(string filePath, string title, string textToInsert)
+{
+    using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(filePath, true))
+    {
+        var sdt = wordDoc.MainDocumentPart.Document.Body.Descendants<SdtBlock>()
+                    .FirstOrDefault(s => s.SdtProperties.GetFirstChild<Tag>()?.Val == title);
+
+        if (sdt != null)
+        {
+            var content = sdt.SdtContentBlock;
+            content.RemoveAllChildren<Paragraph>(); // Удаляем существующий текст
+            content.Append(new Paragraph(new Run(new Text(textToInsert))));
+        }
+
+        wordDoc.MainDocumentPart.Document.Save();
+    }
+}
