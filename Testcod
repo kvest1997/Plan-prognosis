@@ -1,0 +1,61 @@
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.ExtendedProperties;
+using System;
+using System.Linq;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        string filePath = "example.docx";
+
+        // Открываем существующий документ Word
+        using (WordprocessingDocument wordDocument = WordprocessingDocument.Open(filePath, true))
+        {
+            // Создаем многострочное значение с HTML-тегами
+            string multiLineValue = "Первая строка<br />Вторая строка<br />Третья строка";
+            UpdateOrAddCustomProperty(wordDocument, "MyMultiLineProperty", multiLineValue);
+            wordDocument.MainDocumentPart.Document.Save();
+        }
+
+        Console.WriteLine("Пользовательское свойство обновлено.");
+    }
+
+    static void UpdateOrAddCustomProperty(WordprocessingDocument wordDocument, string propertyName, string propertyValue)
+    {
+        // Проверяем, есть ли у документа пользовательские свойства
+        if (wordDocument.ExtendedFilePropertiesPart == null)
+        {
+            wordDocument.AddExtendedFilePropertiesPart();
+        }
+
+        // Получаем часть пользовательских свойств
+        var extendedProperties = wordDocument.ExtendedFilePropertiesPart.Properties;
+
+        // Ищем существующее пользовательское свойство
+        var existingProperty = extendedProperties.Elements<CustomDocumentProperty>()
+            .FirstOrDefault(p => p.Name == propertyName);
+        
+        if (existingProperty != null)
+        {
+            // Если свойство существует, обновляем его значение
+            existingProperty.RemoveAllChildren<Text>();
+            existingProperty.AppendChild(new Text(propertyValue));
+        }
+        else
+        {
+            // Если свойство не существует, создаем его
+            var customProperty = new CustomDocumentProperty
+            {
+                Name = propertyName,
+                Type = CustomPropertyType.String
+            };
+            customProperty.AppendChild(new Text(propertyValue));
+            extendedProperties.Append(customProperty);
+        }
+
+        // Сохраняем изменения
+        extendedProperties.Save();
+    }
+}
