@@ -15,3 +15,57 @@ public void InsertTextIntoContentControl(string filePath, string title, string t
         wordDoc.MainDocumentPart.Document.Save();
     }
 }
+
+
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+
+public class WordContentControlExample
+{
+    public void InsertTableAndParagraphIntoContentControl(string filePath)
+    {
+        using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(filePath, true))
+        {
+            // Создаем новое содержимое управления
+            SdtBlock sdtBlock = new SdtBlock(
+                new SdtProperties(
+                    new Title("InsertTableAndParagraph"), // Заголовок содержимого управления
+                    new Tag("InsertTableAndParagraphTag") // Тег для идентификации
+                ),
+                new SdtContentBlock()
+            );
+
+            // Создаем параграф
+            Paragraph paragraph = new Paragraph(
+                new Run(
+                    new Text("Это параграф, который будет вставлен в содержимое управления.")
+                )
+            );
+
+            // Создаем таблицу
+            Table table = new Table();
+
+            // Создаем таблицу с 2 строками и 2 столбцами
+            for (int i = 0; i < 2; i++)
+            {
+                TableRow tableRow = new TableRow();
+                for (int j = 0; j < 2; j++)
+                {
+                    TableCell tableCell = new TableCell(new Paragraph(new Run(new Text($"Ячейка {i + 1}, {j + 1}"))));
+                    tableRow.Append(tableCell);
+                }
+                table.Append(tableRow);
+            }
+
+            // Добавляем параграф и таблицу в содержимое управления
+            sdtBlock.SdtContentBlock.Append(paragraph);
+            sdtBlock.SdtContentBlock.Append(table);
+
+            // Вставляем содержимое управления в конец документа
+            wordDoc.MainDocumentPart.Document.Body.AppendChild(sdtBlock);
+
+            // Сохраняем изменения
+            wordDoc.MainDocumentPart.Document.Save();
+        }
+    }
+}
