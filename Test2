@@ -1,0 +1,97 @@
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        string templatePath = "path/to/your/template.docx";
+        string outputPath = "path/to/your/output.docx";
+
+        // Создаем копию шаблона
+        System.IO.File.Copy(templatePath, outputPath, true);
+
+        using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(outputPath, true))
+        {
+            // Вставка абзаца
+            InsertParagraphAtBookmark(wordDoc, "Это новый абзац, вставленный в документ.", "Bookmark1");
+
+            // Вставка строки текста
+            InsertTextLineAtBookmark(wordDoc, "Это новая строка текста.", "Bookmark2");
+
+            // Вставка таблицы
+            InsertTableAtBookmark(wordDoc, new List<List<string>> 
+            {
+                new List<string> { "Заголовок 1", "Заголовок 2" },
+                new List<string> { "Ячейка 1", "Ячейка 2" },
+                new List<string> { "Ячейка 3", "Ячейка 4" }
+            }, "Bookmark3");
+        }
+    }
+
+    static void InsertParagraphAtBookmark(WordprocessingDocument wordDoc, string text, string bookmarkName)
+    {
+        var bookmarkStart = wordDoc.MainDocumentPart.Document.Body.Descendants<BookmarkStart>()
+            .FirstOrDefault(b => b.Name == bookmarkName);
+
+        if (bookmarkStart != null)
+        {
+            // Найдем родительский элемент (Paragraph)
+            var parentElement = bookmarkStart.Parent;
+            var newParagraph = new Paragraph(new Run(new Text(text)));
+
+            // Вставляем новый абзац перед началом закладки
+            parentElement.InsertBefore(newParagraph, bookmarkStart);
+        }
+    }
+
+    static void InsertTextLineAtBookmark(WordprocessingDocument wordDoc, string text, string bookmarkName)
+    {
+        var bookmarkStart = wordDoc.MainDocumentPart.Document.Body.Descendants<BookmarkStart>()
+            .FirstOrDefault(b => b.Name == bookmarkName);
+
+        if (bookmarkStart != null)
+        {
+            // Найдем родительский элемент (Paragraph)
+            var parentElement = bookmarkStart.Parent;
+            var newRun = new Run(new Text(text));
+            var newParagraph = new Paragraph(newRun);
+
+            // Вставляем новый абзац перед началом закладки
+            parentElement.InsertBefore(newParagraph, bookmarkStart);
+        }
+    }
+
+    static void InsertTableAtBookmark(WordprocessingDocument wordDoc, List<List<string>> data, string bookmarkName)
+    {
+        var bookmarkStart = wordDoc.MainDocumentPart.Document.Body.Descendants<BookmarkStart>()
+            .FirstOrDefault(b => b.Name == bookmarkName);
+
+        if (bookmarkStart != null)
+        {
+            Table table = new Table();
+
+            // Добавляем стиль таблицы
+            TableProperties tblProperties = new TableProperties(new TableWidth() { Type = TableWidthUnitValues.Pct, Width = "1000" });
+            table.AppendChild(tblProperties);
+
+            foreach (var rowData in data)
+            {
+                TableRow row = new TableRow();
+                foreach (var cellData in rowData)
+                {
+                    TableCell cell = new TableCell(new Paragraph(new Run(new Text(cellData))));
+                    row.Append(cell);
+                }
+                table.Append(row);
+            }
+
+            // Вставляем таблицу перед началом закладки
+            var parentElement = bookmarkStart.Parent;
+            parentElement.InsertBefore(table, bookmarkStart);
+        }
+    }
+}
