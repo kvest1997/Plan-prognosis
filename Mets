@@ -72,3 +72,77 @@ private TableCell CreateTableCell(string text)
     cell.Append(paragraph);
     return cell;
 }
+
+
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+
+public void CreateDocumentFromTemplate(string templatePath, string outputPath, Dictionary<string, string> replacements, List<string> paragraphs, List<List<string>> tableData)
+{
+    // Копируем шаблон в новый выходной файл
+    File.Copy(templatePath, outputPath, true);
+
+    // Открываем документ для редактирования
+    using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(outputPath, true))
+    {
+        var body = wordDoc.MainDocumentPart.Document.Body;
+
+        // Замена текстовых меток
+        foreach (var replacement in replacements)
+        {
+            foreach (var text in body.Descendants<Text>())
+            {
+                if (text.Text.Contains(replacement.Key))
+                {
+                    text.Text = text.Text.Replace(replacement.Key, replacement.Value);
+                }
+            }
+        }
+
+        // Добавление абзацев
+        foreach (var paragraphText in paragraphs)
+        {
+            var paragraph = new Paragraph(new Run(new Text(paragraphText)));
+            body.Append(paragraph);
+        }
+
+        // Добавление таблицы
+        if (tableData.Count > 0)
+        {
+            var table = new Table();
+
+            // Создание заголовков таблицы
+            var headerRow = new TableRow();
+            foreach (var header in tableData[0])
+            {
+                headerRow.Append(CreateTableCell(header));
+            }
+            table.Append(headerRow);
+
+            // Добавление строк данных
+            for (int i = 1; i < tableData.Count; i++)
+            {
+                var row = new TableRow();
+                foreach (var cellData in tableData[i])
+                {
+                    row.Append(CreateTableCell(cellData));
+                }
+                table.Append(row);
+            }
+
+            // Вставляем таблицу в конец документа
+            body.Append(table);
+        }
+
+        // Сохраняем изменения
+        wordDoc.MainDocumentPart.Document.Save();
+    }
+}
+
+private TableCell CreateTableCell(string text)
+{
+    var cell = new TableCell();
+    var paragraph = new Paragraph(new Run(new Text(text)));
+    cell.Append(paragraph);
+    return cell;
+}
