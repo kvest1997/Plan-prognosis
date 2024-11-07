@@ -1,0 +1,61 @@
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+using System.Linq;
+
+public class WordContentControlExample
+{
+    public void InsertIntoContentControlByTag(string filePath, string tag, bool insertTable)
+    {
+        using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(filePath, true))
+        {
+            // Находим содержимое управления по тегу
+            var sdtBlock = wordDoc.MainDocumentPart.Document.Body
+                .Descendants<SdtBlock>()
+                .FirstOrDefault(sdt => sdt.SdtProperties.Tag?.Value == tag);
+
+            if (sdtBlock != null)
+            {
+                // Если нужно вставить таблицу
+                if (insertTable)
+                {
+                    // Создаем таблицу
+                    Table table = new Table();
+
+                    // Создаем таблицу с 2 строками и 2 столбцами
+                    for (int i = 0; i < 2; i++)
+                    {
+                        TableRow tableRow = new TableRow();
+                        for (int j = 0; j < 2; j++)
+                        {
+                            TableCell tableCell = new TableCell(new Paragraph(new Run(new Text($"Ячейка {i + 1}, {j + 1}"))));
+                            tableRow.Append(tableCell);
+                        }
+                        table.Append(tableRow);
+                    }
+
+                    // Добавляем таблицу в содержимое управления
+                    sdtBlock.SdtContentBlock.Append(table);
+                }
+                else // Если нужно вставить параграф
+                {
+                    // Создаем параграф
+                    Paragraph paragraph = new Paragraph(
+                        new Run(
+                            new Text("Это новый параграф, добавленный в содержимое управления.")
+                        )
+                    );
+
+                    // Добавляем параграф в содержимое управления
+                    sdtBlock.SdtContentBlock.Append(paragraph);
+                }
+
+                // Сохраняем изменения
+                wordDoc.MainDocumentPart.Document.Save();
+            }
+            else
+            {
+                System.Console.WriteLine($"Содержимое управления с тегом '{tag}' не найдено.");
+            }
+        }
+    }
+}
