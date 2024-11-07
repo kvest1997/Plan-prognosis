@@ -1,0 +1,40 @@
+public async Task<byte[]> CreateDocument()
+{
+    byte[] buffer = File.ReadAllBytes(_sourceFilePath);
+
+    using (MemoryStream stream = new MemoryStream())
+    {
+        await stream.WriteAsync(buffer, 0, buffer.Length);
+        stream.Position = 0;
+
+        using (WordprocessingDocument wordprocessingDocument = WordprocessingDocument.Open(stream, true))
+        {
+            var customFilePropertiesPart = wordprocessingDocument.CustomFilePropertiesPart.Properties;
+
+            SetProperty(customFilePropertiesPart);
+
+            customFilePropertiesPart.Save();
+            wordprocessingDocument.MainDocumentPart.Document.Save(); 
+            wordprocessingDocument.Close();
+
+            return stream.ToArray();
+        }
+    }
+}
+
+        private void SetProperty(DocumentFormat.OpenXml.CustomProperties.Properties properties)
+        {
+            VTLPWSTR vTLPWSTR;
+            foreach (var propertyValue in properties.Elements<CustomDocumentProperty>()) 
+            {
+                vTLPWSTR = propertyValue.ChildElements.First() as VTLPWSTR;
+                string entryStrMtr = string.Empty;
+                
+                foreach (var mtrType in _requestMmrTeoTags.ListTypesOfMTR)
+                {
+                    entryStrMtr += $"{mtrType.UoValue} - {mtrType.UoParameter};\n";
+                }
+                
+                vTLPWSTR.Text = $"{entryStrMtr}";
+            }
+        }
